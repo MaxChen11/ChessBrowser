@@ -40,15 +40,7 @@ namespace ChessBrowser.Components.Pages
             // assuimg you've filled in the credentials in the GUI
             string connection = GetConnectionString();
 
-            // TODO:
-            //   Parse the provided PGN data
-            //   We recommend creating separate libraries to represent chess data and load the file
-
-           
-
             List<ChessGame> chessGames = PGNReader.Read(PGNFileLines);
-
-            Console.WriteLine("Selected PGN File");
 
             for (int i = 0; i < chessGames.Count; i++)
             {
@@ -62,15 +54,39 @@ namespace ChessBrowser.Components.Pages
                 {
                     // Open a connection
                     conn.Open();
+                    for(int i = 0; i < chessGames.Count; i++)
+                    {
+                        MySqlCommand gameCommand = conn.CreateCommand();
+                        ChessGame currGame = chessGames[i];
+                        //Creating/Updating Players
+                        string playerCommand = "insert into Players (Name, ELo) values (\"@pName\", \"@elo\") on duplicate key update Elo if (\"@elo\" > Elo, \"@elo\", Elo);";
+                        gameCommand.CommandText = playerCommand;
+                        gameCommand.Parameters.AddWithValue("@pName", currGame.whitePlayer);
+                        gameCommand.Parameters.AddWithValue("@elo", currGame.whiteElo);
+                        gameCommand.CommandText += playerCommand;
+                        gameCommand.Parameters.AddWithValue("@pName", currGame.blackPlayer);
+                        gameCommand.Parameters.AddWithValue("@elo", currGame.blackElo);
 
-                    // TODO:
-                    //   Iterate through your data and generate appropriate insert commands
 
-                    // TODO:
-                    //   Update the Progress member variable every time progress has been made
-                    //   (e.g. one iteration of your upload loop)
-                    //   This will update the progress bar in the GUI
-                    //   Its value should be an integer representing a percentage of completion
+                        //Adding Event and Game to command
+                        gameCommand.CommandText += "insert ignore into Events (Name, Site, Date) values (\"@eName\", \"@site\", @date);";
+                        gameCommand.CommandText += "insert into ignore Games (Round, Result, Moves, BlackPlayer, WhitePlayer, eID) values(\"@round\", \"@result\", \"@moves\", (" +
+                            "select pID from Players where Name = \"@wPlayer\"), (select pID from Players where Name = \"@bPlayer\"), " +
+                            "(select eID from Events where Name = \"@eName\" and Site = \"@site\" and Date = @date))";
+
+                        //Replacing Game and Event placeholders
+                        gameCommand.Parameters.AddWithValue("@eName", currGame.eventName);
+                        gameCommand.Parameters.AddWithValue("@site", currGame.site);
+                        gameCommand.Parameters.AddWithValue("@date", currGame.eventDateTime);
+                        gameCommand.Parameters.AddWithValue("@round", currGame.roundNumber);
+                        gameCommand.Parameters.AddWithValue("@result", currGame.result);
+                        gameCommand.Parameters.AddWithValue("@moves", currGame.moves);
+                        gameCommand.Parameters.AddWithValue("@wPlayer", currGame.whitePlayer);
+                        gameCommand.Parameters.AddWithValue("@bPlayer", currGame.blackPlayer);
+                        gameCommand.Parameters.AddWithValue("@eName", currGame.eventName);
+                        Console.WriteLine(gameCommand.ExecuteNonQuery());
+                        Progress = (i + 1) / chessGames.Count;
+                    }
                     Progress = 0;
 
                     // This tells the GUI to redraw after you update Progress (this should go inside your loop)
