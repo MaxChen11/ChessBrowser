@@ -126,6 +126,7 @@ namespace ChessBrowser.Components.Pages
 
             using (MySqlConnection conn = new MySqlConnection(connection))
             {
+
                 try
                 {
                     // Open a connection
@@ -134,6 +135,88 @@ namespace ChessBrowser.Components.Pages
                     // TODO:
                     //   Generate and execute an SQL command,
                     //   then parse the results into an appropriate string and return it.
+
+                    MySqlCommand command = conn.CreateCommand();
+                    command.CommandText = 
+                        "select Moves, " +
+                        "Events.Name as eName, " +
+                        "Site, " +
+                        "Date, " +
+                        "wPlayers.Name as wName, bPlayers.Name as bName, " +
+                        "wPlayers.Elo as wElo, bPlayers.Elo as bElo, " +
+                        "Result from Games natural join Events join (Players wPlayers) join (Players bPlayers) " +
+                        "where wPlayers.pID = WhitePlayer and bPlayers.pID = BlackPlayer ";
+
+                    String whitePlayerCheck = "";
+                    String blackPlayerCheck = "";
+                    String openingMoveCheck = "";
+                    String winnerCheck = "";
+                    String dateCheck = "";
+
+
+                    if (!String.IsNullOrEmpty(white))
+                    {
+                        whitePlayerCheck += "wPlayers.Name = @wPlayer";
+                    }
+                    if (!String.IsNullOrEmpty(black))
+                    {
+                        blackPlayerCheck += "bPlayers.Name = @bPlayer";
+                    }
+                    if (!String.IsNullOrEmpty(opening))
+                    {
+                        openingMoveCheck += "Moves like @opening";
+                    }
+                    if (!winner.Equals("Any"))
+                    {
+                        winnerCheck += "Result=@winner";
+                    }
+                    if (useDate)
+                    {
+                        dateCheck = "Date >= @startDate AND Date <= @endDate";
+                    }
+
+
+                    String[] conditionStrings = { whitePlayerCheck, blackPlayerCheck, openingMoveCheck, winnerCheck, dateCheck };
+
+                    for (int i = 0; i < conditionStrings.Length; i++) {
+                        if (conditionStrings[i] == "")
+                        {
+                            continue;
+                        }
+
+                        command.CommandText += " and ";
+
+                        command.CommandText += conditionStrings[i];
+                    }
+
+
+                    command.Parameters.AddWithValue("@wPlayer", white);
+                    command.Parameters.AddWithValue("@bPlayer", black);
+                    command.Parameters.AddWithValue("@opening", opening + "%");
+                    command.Parameters.AddWithValue("@winner", winner[0]);
+                    command.Parameters.AddWithValue("@startDate", start);
+                    command.Parameters.AddWithValue("@endDate", end);
+
+                    command.CommandText += ";";
+
+
+                    using (MySqlDataReader reader = command.ExecuteReader()) {
+                        while (reader.Read()) {
+                            numRows++;
+                            parsedResult += "Event: " + reader["eName"] + "\n";
+                            parsedResult += "Site: " + reader["Site"] + "\n";
+                            parsedResult += "Date: " + reader["Date"] + "\n";
+                            parsedResult += "White: " + reader["wName"] + " (" + reader["wElo"] + ")\n";
+                            parsedResult += "White: " + reader["bName"] + " (" + reader["bElo"] + ")\n";
+                            parsedResult += "Result: " + reader["Result"] + "\n";
+
+                            if (showMoves) {
+                                parsedResult += reader["Moves"] + "\n";
+                            }
+                            parsedResult += "\n";
+
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
@@ -141,6 +224,7 @@ namespace ChessBrowser.Components.Pages
                 }
             }
 
+            Console.WriteLine("Parsed Result:" + parsedResult);
             return numRows + " results\n" + parsedResult;
         }
 
