@@ -58,34 +58,28 @@ namespace ChessBrowser.Components.Pages
                     {
                         MySqlCommand gameCommand = conn.CreateCommand();
                         ChessGame currGame = chessGames[i];
-                        //Creating/Updating Players
-                        string playerCommand = "insert into Players (Name, ELo) values (\"@pName\", \"@elo\") on duplicate key update Elo if (\"@elo\" > Elo, \"@elo\", Elo);";
-                        gameCommand.CommandText = playerCommand;
-                        gameCommand.Parameters.AddWithValue("@pName", currGame.whitePlayer);
-                        gameCommand.Parameters.AddWithValue("@elo", currGame.whiteElo);
-                        gameCommand.CommandText += playerCommand;
-                        gameCommand.Parameters.AddWithValue("@pName", currGame.blackPlayer);
-                        gameCommand.Parameters.AddWithValue("@elo", currGame.blackElo);
+                        //Adding prepared statements
+                        gameCommand.CommandText = "insert into Players (Name, ELo) values (@wPlayer, @wElo) on duplicate key update Elo = if (@wElo > Elo, @wElo, Elo);";
+                        gameCommand.CommandText += "insert ignore into Players (Name, ELo) values (@bPlayer, @bElo) on duplicate key update Elo = if (@bElo > Elo, @bElo, Elo);";
+                        gameCommand.CommandText += "insert ignore into Events (Name, Site, Date) values (@eName, @site, @date);";
+                        gameCommand.CommandText += "insert ignore into Games (Round, Result, Moves, BlackPlayer, WhitePlayer, eID) values(@round, @result, @moves, (" +
+                            "select pID from Players where Name = @wPlayer), (select pID from Players where Name = @bPlayer), " +
+                            "(select eID from Events where Name = @eName and Site = @site and Date = @date))";
 
-
-                        //Adding Event and Game to command
-                        gameCommand.CommandText += "insert ignore into Events (Name, Site, Date) values (\"@eName\", \"@site\", @date);";
-                        gameCommand.CommandText += "insert into ignore Games (Round, Result, Moves, BlackPlayer, WhitePlayer, eID) values(\"@round\", \"@result\", \"@moves\", (" +
-                            "select pID from Players where Name = \"@wPlayer\"), (select pID from Players where Name = \"@bPlayer\"), " +
-                            "(select eID from Events where Name = \"@eName\" and Site = \"@site\" and Date = @date))";
-
-                        //Replacing Game and Event placeholders
+                        //Replacing placeholder values with values from chessGames
+                        gameCommand.Parameters.AddWithValue("@wPlayer", currGame.whitePlayer);
+                        gameCommand.Parameters.AddWithValue("@wElo", currGame.whiteElo);
+                        gameCommand.Parameters.AddWithValue("@bPlayer", currGame.blackPlayer);
+                        gameCommand.Parameters.AddWithValue("@bElo", currGame.blackElo);
                         gameCommand.Parameters.AddWithValue("@eName", currGame.eventName);
                         gameCommand.Parameters.AddWithValue("@site", currGame.site);
                         gameCommand.Parameters.AddWithValue("@date", currGame.eventDateTime);
                         gameCommand.Parameters.AddWithValue("@round", currGame.roundNumber);
                         gameCommand.Parameters.AddWithValue("@result", currGame.result);
                         gameCommand.Parameters.AddWithValue("@moves", currGame.moves);
-                        gameCommand.Parameters.AddWithValue("@wPlayer", currGame.whitePlayer);
-                        gameCommand.Parameters.AddWithValue("@bPlayer", currGame.blackPlayer);
-                        gameCommand.Parameters.AddWithValue("@eName", currGame.eventName);
-                        Console.WriteLine(gameCommand.ExecuteNonQuery());
-                        Progress = (i + 1) / chessGames.Count;
+                        gameCommand.ExecuteNonQuery();
+                        Progress = (int)(((float)(i + 1) / (float)chessGames.Count) * 100);
+                        await InvokeAsync(StateHasChanged);
                     }
                     Progress = 0;
 
