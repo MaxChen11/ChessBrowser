@@ -59,10 +59,10 @@ namespace ChessBrowser.Components.Pages
                         MySqlCommand gameCommand = conn.CreateCommand();
                         ChessGame currGame = chessGames[i];
                         //Adding prepared statements
-                        gameCommand.CommandText = "insert into Players (Name, ELo) values (@wPlayer, @wElo) on duplicate key update Elo = if (@wElo > Elo, @wElo, Elo);";
-                        gameCommand.CommandText += "insert ignore into Players (Name, ELo) values (@bPlayer, @bElo) on duplicate key update Elo = if (@bElo > Elo, @bElo, Elo);";
+                        gameCommand.CommandText = "insert into Players (Name, Elo) values (@wPlayer, @wElo) on duplicate key update Elo = if (@wElo > Elo, @wElo, Elo);";
+                        gameCommand.CommandText += "insert into Players (Name, Elo) values (@bPlayer, @bElo) on duplicate key update Elo = if (@bElo > Elo, @bElo, Elo);";
                         gameCommand.CommandText += "insert ignore into Events (Name, Site, Date) values (@eName, @site, @date);";
-                        gameCommand.CommandText += "insert ignore into Games (Round, Result, Moves, BlackPlayer, WhitePlayer, eID) values(@round, @result, @moves, (" +
+                        gameCommand.CommandText += "insert ignore into Games (Round, Result, Moves, WhitePlayer, BlackPlayer, eID) values(@round, @result, @moves, (" +
                             "select pID from Players where Name = @wPlayer), (select pID from Players where Name = @bPlayer), " +
                             "(select eID from Events where Name = @eName and Site = @site and Date = @date))";
 
@@ -132,10 +132,6 @@ namespace ChessBrowser.Components.Pages
                     // Open a connection
                     conn.Open();
 
-                    // TODO:
-                    //   Generate and execute an SQL command,
-                    //   then parse the results into an appropriate string and return it.
-
                     MySqlCommand command = conn.CreateCommand();
                     command.CommandText = 
                         "select Moves, " +
@@ -166,7 +162,7 @@ namespace ChessBrowser.Components.Pages
                     {
                         openingMoveCheck += "Moves like @opening";
                     }
-                    if (!winner.Equals("Any"))
+                    if (!String.IsNullOrEmpty(winner) && !winner.Equals("Any"))
                     {
                         winnerCheck += "Result=@winner";
                     }
@@ -193,7 +189,7 @@ namespace ChessBrowser.Components.Pages
                     command.Parameters.AddWithValue("@wPlayer", white);
                     command.Parameters.AddWithValue("@bPlayer", black);
                     command.Parameters.AddWithValue("@opening", opening + "%");
-                    command.Parameters.AddWithValue("@winner", winner[0]);
+                    if(winner.Length > 0) command.Parameters.AddWithValue("@winner", winner[0]);
                     command.Parameters.AddWithValue("@startDate", start);
                     command.Parameters.AddWithValue("@endDate", end);
 
@@ -207,7 +203,7 @@ namespace ChessBrowser.Components.Pages
                             parsedResult += "Site: " + reader["Site"] + "\n";
                             parsedResult += "Date: " + reader["Date"] + "\n";
                             parsedResult += "White: " + reader["wName"] + " (" + reader["wElo"] + ")\n";
-                            parsedResult += "White: " + reader["bName"] + " (" + reader["bElo"] + ")\n";
+                            parsedResult += "Black: " + reader["bName"] + " (" + reader["bElo"] + ")\n";
                             parsedResult += "Result: " + reader["Result"] + "\n";
 
                             if (showMoves) {

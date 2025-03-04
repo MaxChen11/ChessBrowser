@@ -1,7 +1,15 @@
 ﻿namespace ChessBrowser.Components
 {
+    /// <summary>
+    /// This class takes in strings in PGN format and converts them into ChessGame objects
+    /// </summary>
     public static class PGNReader
     {
+        /// <summary>
+        /// Takes in PGN data as an array of strings and converts the contents into a list of ChessGames
+        /// </summary>
+        /// <param name="chessText">The PGN text to be read</param>
+        /// <returns>The list of translated ChessGame objects</returns>
         public static List<ChessGame> Read(string[] chessText)
         {
             List<ChessGame> chessGames = new List<ChessGame>();
@@ -25,7 +33,7 @@
                 if (chessText[i].StartsWith("[Event ")) {
                     int strLen = chessText[i].Length;
                     eventName = chessText[i].Substring(8, chessText[i].Length - 10);
-                } 
+                }
                 else if (chessText[i].StartsWith("[Site "))
                 {
                     site = chessText[i].Substring(7, chessText[i].Length - 9);
@@ -70,7 +78,7 @@
                     if (chessText[i].Contains('?'))
                     {
                         eventDateTime = new DateTime();
-                    } 
+                    }
                     else
                     {
                         eventDateTime = DateTime.Parse(chessText[i].Substring(12, chessText[i].Length - 14));
@@ -98,7 +106,7 @@
                     }
 
                 }
-                else if (chessText[i].StartsWith("[ECO "))
+                else if (chessText[i].StartsWith("[ECO ") || chessText[i].StartsWith("[Date "))
                 {
                     continue;
                 }
